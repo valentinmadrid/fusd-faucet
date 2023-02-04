@@ -5,7 +5,7 @@ import { ContextProvider } from '../contexts/ContextProvider';
 import { AppBar } from '../components/AppBar';
 import { ContentContainer } from '../components/ContentContainer';
 import { Footer } from '../components/Footer';
-import Notifications from '../components/Notification'
+import Notifications from '../components/Notification';
 import { Layout } from 'components/Layout';
 
 require('@solana/wallet-adapter-react-ui/styles.css');
@@ -15,15 +15,12 @@ const App: FC<AppProps> = ({ Component, pageProps }) => {
   return (
     <>
       <Head>
-        <title>Solana Pay Scaffold</title>
-        <meta
-          name="description"
-          content="Solana Pay Scaffold"
-        />
+        <title>Solana SPL Faucet</title>
+        <meta name='description' content='Solana SPL Faucet' />
       </Head>
 
       <ContextProvider>
-        <div className="flex flex-col h-screen">
+        <div className='flex flex-col h-screen'>
           <Notifications />
           <AppBar />
           <ContentContainer>

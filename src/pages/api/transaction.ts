@@ -1,142 +1,175 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import { Cluster, clusterApiUrl, Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, Keypair } from '@solana/web3.js'
-import type { NextApiRequest, NextApiResponse } from 'next'
+import type { NextApiRequest, NextApiResponse } from 'next';
+import {
+  clusterApiUrl,
+  Connection,
+  Keypair,
+  PublicKey,
+  Transaction,
+} from '@solana/web3.js';
+import {
+  createAssociatedTokenAccountInstruction,
+  getAssociatedTokenAddress,
+} from '@solana/spl-token';
+import * as anchor from '@project-serum/anchor';
+import { Program, Idl, BN } from '@project-serum/anchor';
+import idl from '../../idl/idl.json';
 
-type GetResponse = {
-  label: string,
-  icon: string,
+type POST = {
+  transaction: string;
+  message: string;
 };
 
-export type PostRequest = {
-  account: string,
+type GET = {
+  label: string;
+  icon: string;
 };
 
-export type PostResponse = {
-  transaction: string,
-  message: string,
-  network: Cluster,
-};
-
-export type PostError = {
-  error: string
-};
-
-// Response for GET request
-function get(res: NextApiResponse<GetResponse>) {
-  res.status(200).json({
-    label: 'My Store',
-    icon: 'https://solanapay.com/src/img/branding/Solanapay.com/downloads/gradient.svg',
-  });
+function getFromPayload(
+  req: NextApiRequest,
+  payload: string,
+  field: string
+): string {
+  function parseError() {
+    throw new Error(`${payload} parse error: missing ${field}`);
+  }
+  let value;
+  if (payload === 'Query') {
+    if (!(field in req.query)) parseError();
+    value = req.query[field];
+  }
+  if (payload === 'Body') {
+    if (!req.body || !(field in req.body)) parseError();
+    value = req.body[field];
+  }
+  if (value === undefined || value.length === 0) parseError();
+  return typeof value === 'string' ? value : value[0];
 }
 
-// Main body of the POST request, this returns the transaction
-async function postImpl(
-  network: Cluster,
-  account: PublicKey,
-  reference: PublicKey
-): Promise<PostResponse> {
-  // Can also use a custom RPC here
-  const endpoint = clusterApiUrl(network);
-  const connection = new Connection(endpoint);
+export default function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method === 'GET') {
+    return get(req, res);
+  }
 
-  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+  if (req.method === 'POST') {
+    return post(req, res);
+  }
+}
 
-  // Create any transaction
-  const transaction = new Transaction({
-    feePayer: account,
-    blockhash,
-    lastValidBlockHeight,
+const get = async (req: NextApiRequest, res: NextApiResponse<GET>) => {
+  const label = 'Solami Pizza';
+  const icon =
+    'https://media.discordapp.net/attachments/964525722301501477/978683590743302184/sol-logo1.png';
+
+  res.status(200).json({
+    label,
+    icon,
   });
+};
 
-  const transferInstruction = SystemProgram.transfer({
-    fromPubkey: account,
-    toPubkey: Keypair.generate().publicKey,
-    lamports: LAMPORTS_PER_SOL / 1000,
-  });
+const post = async (req: NextApiRequest, res: NextApiResponse<POST>) => {
+  const BOMK_MINT_ADDRESS = new PublicKey(
+    '3CHKioaZLccwKUyBjDz4w8HaTHettizV3Cjb6qg2a8R4'
+  );
+  const FUSD_MINT_ADDRESS = new PublicKey(
+    '4HZCNvobxtDA3uezTGmDAEqVLp7oo73UrnbxNeUMszd4'
+  );
+  const accountField = getFromPayload(req, 'Body', 'account');
+  const referenceField = getFromPayload(req, 'Query', 'reference');
 
-  // Add reference as a key to the instruction
-  // This allows us to listen for this transaction
-  transferInstruction.keys.push({
+  const sender = new PublicKey(accountField);
+  const reference = new PublicKey(referenceField);
+  const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
+  const mockWallet = {
+    signTransaction: () => Promise.reject(),
+    signAllTransactions: () => Promise.reject(),
+    publicKey: Keypair.generate().publicKey,
+  };
+  const provider = new anchor.AnchorProvider(connection, mockWallet, {});
+
+  const programId = new PublicKey(
+    'GCGsUSYteThHoeZeT78AXHjLKmwVCVsP8WqT3GhSMLua'
+  );
+  const program = new anchor.Program(idl as Idl, programId, provider);
+
+  const transaction = new Transaction();
+  const latestBlockhash = await connection.getLatestBlockhash();
+  transaction.feePayer = sender;
+  transaction.recentBlockhash = latestBlockhash.blockhash;
+
+  const fusdSenderATA = await getAssociatedTokenAddress(
+    FUSD_MINT_ADDRESS,
+    sender
+  );
+  const senderFusdTokenAccount = await connection.getAccountInfo(fusdSenderATA);
+
+  if (!senderFusdTokenAccount) {
+    const createFusdSenderATA = await createAssociatedTokenAccountInstruction(
+      sender,
+      fusdSenderATA,
+      sender,
+      FUSD_MINT_ADDRESS
+    );
+    transaction.add(createFusdSenderATA);
+  }
+  const fusdFaucetTokenAccountPk = new PublicKey(
+    '7UtG9j5iXPFW2FHvz6mwvkuSacMdwDWpAb1keX5Brt2R'
+  );
+  const fusdFaucetPk = new PublicKey(
+    'H1oPBpqEN6bMDHmbajGWRF6He2kTECLpJFMTrZi6SSEU'
+  );
+
+  const withdrawerAccount1 = new anchor.web3.PublicKey(
+    '6qLVcHMo9Hgta5WwQjmougUTLTsAkXpfZ8nKB9YEGddN'
+  );
+
+  const [withdrawPk] = await PublicKey.findProgramAddress(
+    [Buffer.from('withdrawer'), sender.toBuffer()],
+    programId
+  );
+
+  const clock = new anchor.web3.PublicKey(
+    'SysvarC1ock11111111111111111111111111111111'
+  );
+  const withdrawAccount = await connection.getAccountInfo(withdrawPk);
+  if (!withdrawAccount) {
+    const createWithdrawAccount = await program.methods
+      .initializeWithdrawer()
+      .accounts({
+        signer: sender,
+        withdrawer: withdrawPk,
+      })
+      .instruction();
+    transaction.add(createWithdrawAccount);
+  }
+
+  const txHash2 = await program.methods
+    .withdraw(new BN(10000))
+    .accounts({
+      mint: FUSD_MINT_ADDRESS,
+      withdrawerAccount: fusdSenderATA,
+      faucetAccount: fusdFaucetTokenAccountPk,
+      faucet: fusdFaucetPk,
+      withdrawer: withdrawPk,
+      clock: clock,
+    })
+    .instruction();
+
+  txHash2.keys.push({
     pubkey: reference,
     isSigner: false,
     isWritable: false,
   });
+  transaction.add(txHash2);
 
-  transaction.add(transferInstruction);
-
-  // Serialize the transaction and convert to base64 to return it
+  // Serialize and return the unsigned transaction.
   const serializedTransaction = transaction.serialize({
-    requireAllSignatures: false // account is a missing signature
+    verifySignatures: false,
+    requireAllSignatures: false,
   });
-  const base64 = serializedTransaction.toString('base64');
 
-  // Return the serialized transaction
-  return {
-    transaction: base64,
-    message: 'Thankyou for your purchase!',
-    network,
-  };
-}
+  const base64Transaction = serializedTransaction.toString('base64');
+  const message = 'Thanks for using our faucet!';
 
-// We pass eg. network in query params, this function extracts the value of a query param
-function getFromQuery(
-  req: NextApiRequest,
-  field: string
-): string | undefined {
-  if (!(field in req.query)) return undefined;
-
-  const value = req.query[field];
-  if (typeof value === 'string') return value;
-  // value is string[]
-  if (value.length === 0) return undefined;
-  return value[0];
-}
-
-async function post(
-  req: NextApiRequest,
-  res: NextApiResponse<PostResponse | PostError>
-) {
-  const { account } = req.body as PostRequest
-  console.log(req.body)
-  if (!account) {
-    res.status(400).json({ error: 'No account provided' })
-    return
-  }
-
-  const network = getFromQuery(req, 'network') as Cluster;
-  if (!network) {
-    res.status(400).json({ error: 'No network provided' });
-    return
-  }
-
-  const reference = getFromQuery(req, 'reference');
-  if (!reference) {
-    res.status(400).json({ error: 'No reference provided' })
-    return
-  }
-
-  try {
-    const postResponse = await postImpl(
-      network,
-      new PublicKey(account),
-      new PublicKey(reference),
-    );
-    res.status(200).json(postResponse)
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Error creating transaction' })
-  }
-}
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<GetResponse | PostResponse | PostError>
-) {
-  if (req.method === 'GET') {
-    return get(res);
-  } else if (req.method === 'POST') {
-    return await post(req, res);
-  } else {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-}
+  res.status(200).send({ transaction: base64Transaction, message });
+};
