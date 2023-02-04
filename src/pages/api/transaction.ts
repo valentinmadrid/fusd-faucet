@@ -151,6 +151,7 @@ const post = async (req: NextApiRequest, res: NextApiResponse<POST>) => {
       faucetAccount: fusdFaucetTokenAccountPk,
       faucet: fusdFaucetPk,
       withdrawer: withdrawPk,
+      signer: sender,
       clock: clock,
     })
     .instruction();
