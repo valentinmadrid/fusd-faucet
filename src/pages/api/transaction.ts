@@ -146,12 +146,12 @@ const post = async (req: NextApiRequest, res: NextApiResponse<POST>) => {
   const txHash2 = await program.methods
     .withdraw(new BN(10000))
     .accounts({
+      signer: sender,
       mint: FUSD_MINT_ADDRESS,
       withdrawerAccount: fusdSenderATA,
       faucetAccount: fusdFaucetTokenAccountPk,
       faucet: fusdFaucetPk,
       withdrawer: withdrawPk,
-      signer: sender,
       clock: clock,
     })
     .instruction();
