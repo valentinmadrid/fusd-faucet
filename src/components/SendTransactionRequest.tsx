@@ -7,9 +7,13 @@ import { useNetworkConfiguration } from '../contexts/NetworkConfigurationProvide
 
 type SendTransactionRequestProps = {
   reference: PublicKey;
+  mint?: PublicKey;
+  amount?: number;
 };
 
 export const SendTransactionRequest: FC<SendTransactionRequestProps> = ({
+  mint,
+  amount,
   reference,
 }) => {
   const { connection } = useConnection();
@@ -27,7 +31,7 @@ export const SendTransactionRequest: FC<SendTransactionRequestProps> = ({
     try {
       // Request the transaction from transaction request API
       const { data } = await axios.post(
-        `/api/transaction?network=${networkConfiguration}&reference=${reference.toBase58()}`,
+        `/api/transaction?network=${networkConfiguration}&reference=${reference.toBase58()}&mint=${mint?.toBase58()}&amount=${amount}`,
         {
           account: publicKey,
         },
@@ -89,11 +93,13 @@ export const SendTransactionRequest: FC<SendTransactionRequestProps> = ({
   return (
     <div>
       <button
-        className='group w-60 m-2 btn animate-pulse disabled:animate-none bg-gradient-to-r from-[#9945FF] to-[#14F195] hover:from-pink-500 hover:to-yellow-500 ... '
+        className='group w-60 m-2 btn disabled:bg-slate-600 bg-black ... '
         onClick={onClick}
         disabled={!publicKey}
       >
-        <div className='hidden group-disabled:block '>Wallet not connected</div>
+        <div className='hidden group-disabled:block text-white '>
+          Wallet not connected
+        </div>
         <span className='block group-disabled:hidden'>Send with wallet</span>
       </button>
     </div>

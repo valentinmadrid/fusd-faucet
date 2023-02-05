@@ -57,7 +57,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 }
 
 const get = async (req: NextApiRequest, res: NextApiResponse<GET>) => {
-  const label = 'Solami Pizza';
+  const label = 'Solana SPL Faucet';
   const icon =
     'https://media.discordapp.net/attachments/964525722301501477/978683590743302184/sol-logo1.png';
 
@@ -71,11 +71,13 @@ const post = async (req: NextApiRequest, res: NextApiResponse<POST>) => {
   const BOMK_MINT_ADDRESS = new PublicKey(
     '3CHKioaZLccwKUyBjDz4w8HaTHettizV3Cjb6qg2a8R4'
   );
-  const FUSD_MINT_ADDRESS = new PublicKey(
-    '4HZCNvobxtDA3uezTGmDAEqVLp7oo73UrnbxNeUMszd4'
-  );
+
   const accountField = getFromPayload(req, 'Body', 'account');
   const referenceField = getFromPayload(req, 'Query', 'reference');
+  const amountField = getFromPayload(req, 'Query', 'amount');
+  const amount = new BN(amountField);
+  const mint = getFromPayload(req, 'Query', 'mint');
+  const FUSD_MINT_ADDRESS = new PublicKey(mint);
 
   const sender = new PublicKey(accountField);
   const reference = new PublicKey(referenceField);
@@ -108,19 +110,19 @@ const post = async (req: NextApiRequest, res: NextApiResponse<POST>) => {
       sender,
       fusdSenderATA,
       sender,
-      FUSD_MINT_ADDRESS
+      FUSD_MINT_ADDRESS,
+      new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
     );
     transaction.add(createFusdSenderATA);
   }
-  const fusdFaucetTokenAccountPk = new PublicKey(
-    '7UtG9j5iXPFW2FHvz6mwvkuSacMdwDWpAb1keX5Brt2R'
-  );
-  const fusdFaucetPk = new PublicKey(
-    'H1oPBpqEN6bMDHmbajGWRF6He2kTECLpJFMTrZi6SSEU'
-  );
-
-  const withdrawerAccount1 = new anchor.web3.PublicKey(
-    '6qLVcHMo9Hgta5WwQjmougUTLTsAkXpfZ8nKB9YEGddN'
+  const [fusdFaucetTokenAccountPk] =
+    await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from('token-seed'), FUSD_MINT_ADDRESS.toBuffer()],
+      programId
+    );
+  const [fusdFaucetPk] = await anchor.web3.PublicKey.findProgramAddress(
+    [Buffer.from('mint'), FUSD_MINT_ADDRESS.toBuffer()],
+    programId
   );
 
   const [withdrawPk] = await PublicKey.findProgramAddress(
@@ -144,7 +146,7 @@ const post = async (req: NextApiRequest, res: NextApiResponse<POST>) => {
   }
 
   const txHash2 = await program.methods
-    .withdraw(new BN(10000))
+    .withdraw(amount)
     .accounts({
       signer: sender,
       mint: FUSD_MINT_ADDRESS,
