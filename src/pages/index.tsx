@@ -35,6 +35,7 @@ const Home: NextPage = () => {
 
   return (
     <div>
+      <p className='text-black'>You are limited to one airdrop every minute</p>
       <div className='bg-slate-300 rounded-lg shadow-xl p-4 mt-2'>
         <div>
           <WalletMultiButton style={{ backgroundColor: 'blue' }} />
