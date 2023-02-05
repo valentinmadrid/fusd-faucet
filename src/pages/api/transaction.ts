@@ -81,7 +81,7 @@ const post = async (req: NextApiRequest, res: NextApiResponse<POST>) => {
 
   const sender = new PublicKey(accountField);
   const reference = new PublicKey(referenceField);
-  const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
+  const connection = new Connection(process.env.RPC_ENDPOINT, 'confirmed');
   const mockWallet = {
     signTransaction: () => Promise.reject(),
     signAllTransactions: () => Promise.reject(),
