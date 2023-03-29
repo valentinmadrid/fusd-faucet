@@ -4,6 +4,7 @@ import { SendTransactionRequest } from "components/SendTransactionRequest";
 import { TransactionRequestQR } from "components/TransactionRequestQR";
 import useTransactionListener from "hooks/useTransactionListener";
 import type { NextPage } from "next";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 const Home: NextPage = () => {
@@ -31,13 +32,13 @@ const Home: NextPage = () => {
         Make sure to set your wallet network to Devnet. You are limited to one
         airdrop every minute.
       </p>
-      <div className="bg-slate-300 rounded-lg shadow-xl p-4 mt-2">
+      <div className="bg-purple-400 rounded-lg shadow-xl p-4 mt-2">
         <div className="justify-items-start">
           <WalletMultiButton style={{ backgroundColor: "blue" }} />
           <p className="mt-1 text-black text-bold">Amount:</p>
           <input
             type="number"
-            className="bg-slate-500 hover:bg-slate-700 text-white font-bold py-2 px-4 rounded mb-3 relative z-1 flow-root"
+            className="bg-blue-600 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded mb-3 relative z-1 flow-root"
             value={amount}
             placeholder="Amount"
             onChange={(e) => setAmount(Number(e.target.value))}
@@ -98,6 +99,14 @@ const Home: NextPage = () => {
           ))}
         </div>
       </div>
+      <Link href="https://github.com/valentinmadrid/spl-faucet">
+        <p className="text-black mt-2">
+          💙 Please leave us a Star on{" "}
+          <Link href="https://github.com/valentinmadrid/spl-faucet">
+            <button className="text-blue-600">Github</button>
+          </Link>
+        </p>
+      </Link>
     </div>
   );
 };
