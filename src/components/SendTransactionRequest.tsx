@@ -1,9 +1,9 @@
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { PublicKey, Transaction, TransactionSignature } from '@solana/web3.js';
-import axios from 'axios';
-import { FC, useCallback } from 'react';
-import { notify } from '../utils/notifications';
-import { useNetworkConfiguration } from '../contexts/NetworkConfigurationProvider';
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { PublicKey, Transaction, TransactionSignature } from "@solana/web3.js";
+import axios from "axios";
+import { FC, useCallback } from "react";
+import { notify } from "../utils/notifications";
+import { useNetworkConfiguration } from "../contexts/NetworkConfigurationProvider";
 
 type SendTransactionRequestProps = {
   reference: PublicKey;
@@ -22,12 +22,12 @@ export const SendTransactionRequest: FC<SendTransactionRequestProps> = ({
 
   const onClick = useCallback(async () => {
     if (!publicKey) {
-      notify({ type: 'error', message: `Wallet not connected!` });
-      console.error('Send Transaction: Wallet not connected!');
+      notify({ type: "error", message: `Wallet not connected!` });
+      console.error("Send Transaction: Wallet not connected!");
       return;
     }
 
-    let signature: TransactionSignature = '';
+    let signature: TransactionSignature = "";
     try {
       // Request the transaction from transaction request API
       const { data } = await axios.post(
@@ -43,11 +43,11 @@ export const SendTransactionRequest: FC<SendTransactionRequestProps> = ({
 
       const response = data;
 
-      if ('error' in response) {
+      if ("error" in response) {
         console.error(`Failed to fetch transaction! ${response.error}`);
         notify({
-          type: 'error',
-          message: 'Failed to fetch transaction!',
+          type: "error",
+          message: "Failed to fetch transaction!",
           description: response.error,
         });
         return;
@@ -55,19 +55,19 @@ export const SendTransactionRequest: FC<SendTransactionRequestProps> = ({
 
       const message = response.message;
       notify({
-        type: 'info',
-        message: 'Fetched transaction!',
+        type: "info",
+        message: "Fetched transaction!",
         description: `message: ${message}`,
       });
 
       // De-serialize the returned transaction
       const transaction = Transaction.from(
-        Buffer.from(response.transaction, 'base64')
+        Buffer.from(response.transaction, "base64")
       );
 
       // Debug: log current and expected signers of the transaction
       // The API can return a partially signed transaction
-      console.log('Fetched transaction', transaction);
+      console.log("Fetched transaction", transaction);
       const currentSigners = transaction.signatures
         .filter((k) => k.signature !== null)
         .map((k) => k.publicKey.toBase58());
@@ -80,7 +80,7 @@ export const SendTransactionRequest: FC<SendTransactionRequestProps> = ({
       await sendTransaction(transaction, connection);
     } catch (error: any) {
       notify({
-        type: 'error',
+        type: "error",
         message: `Transaction failed!`,
         description: error?.message,
         txid: signature,
@@ -101,14 +101,14 @@ export const SendTransactionRequest: FC<SendTransactionRequestProps> = ({
   return (
     <div>
       <button
-        className='group w-60 m-2 btn disabled:bg-slate-600 bg-black ... '
+        className="group w-60 m-2 btn disabled:bg-slate-600 bg-black ... "
         onClick={onClick}
         disabled={!publicKey}
       >
-        <div className='hidden group-disabled:block text-white '>
+        <div className="hidden group-disabled:block text-white ">
           Wallet not connected
         </div>
-        <span className='block group-disabled:hidden'>Send with wallet</span>
+        <span className="block group-disabled:hidden">Request Airdrop</span>
       </button>
     </div>
   );
